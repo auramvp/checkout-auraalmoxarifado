@@ -19,8 +19,16 @@ export async function processCheckout(
     planKey: 'starter' | 'pro' | 'business' | 'intelligence' = 'business',
     billingCycle: 'MONTHLY' | 'YEARLY' = 'MONTHLY'
 ): Promise<CheckoutResult> {
+    // Validate environment variables first
+    if (!SUPABASE_URL || SUPABASE_URL === 'undefined') {
+        return {
+            success: false,
+            error: 'Configuração ausente: VITE_SUPABASE_URL não localizada. Verifique as Variáveis de Ambiente no Vercel (deve começar com VITE_) e refaça o Deploy.',
+        };
+    }
+
     try {
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-subscription`, {
+        const response = await fetch(`${SUPABASE_URL.replace(/\/$/, '')}/functions/v1/create-subscription`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
