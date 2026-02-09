@@ -32,6 +32,16 @@ export async function processCheckout(
             }),
         });
 
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const errorText = await response.text();
+            console.error('Non-JSON response received:', errorText);
+            return {
+                success: false,
+                error: `Erro do servidor: O endpoint não retornou JSON. Verifique se a URL do Supabase está correta.`,
+            };
+        }
+
         const result = await response.json();
 
         if (!response.ok || !result.success) {
