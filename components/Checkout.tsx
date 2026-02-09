@@ -324,43 +324,6 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
           {currentStep === 2 && "Localização do seu almoxarifado."}
           {currentStep === 3 && "Escolha o melhor método de investimento."}
         </p>
-
-        {/* Plan and Cycle Selector at Step 1 */}
-        {currentStep === 1 && (
-          <div className="mt-6 flex flex-col items-center gap-4 w-full max-w-2xl">
-            <div className="flex p-1 bg-slate-900/60 border border-slate-800 rounded-xl w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={() => setBillingCycle('MONTHLY')}
-                className={`px-6 py-2 rounded-lg transition-all font-black text-[9px] tracking-widest uppercase ${billingCycle === 'MONTHLY' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                MENSAL
-              </button>
-              <button
-                type="button"
-                onClick={() => setBillingCycle('YEARLY')}
-                className={`px-6 py-2 rounded-lg transition-all font-black text-[9px] tracking-widest uppercase flex items-center gap-2 ${billingCycle === 'YEARLY' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
-              >
-                ANUAL
-                <span className="bg-emerald-500/20 text-emerald-500 text-[7px] px-1.5 py-0.5 rounded ml-1">ECONOMIZE</span>
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 w-full">
-              {(Object.keys(PLANS_DATA) as PlanKey[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setSelectedPlan(key)}
-                  className={`p-3 rounded-xl border transition-all flex flex-col items-center gap-1 ${selectedPlan === key ? 'border-blue-500 bg-blue-500/10 text-blue-500 ring-1 ring-blue-500/20' : 'border-slate-800 bg-slate-900/40 text-slate-500 hover:border-slate-700'}`}
-                >
-                  <span className="text-[10px] font-black uppercase tracking-widest">{PLANS_DATA[key].name}</span>
-                  <span className="text-[9px] font-bold">R$ {PLANS_DATA[key].prices[billingCycle].toFixed(2).replace('.', ',')}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </header>
 
       <div className="flex flex-col lg:flex-row gap-5 items-stretch">
