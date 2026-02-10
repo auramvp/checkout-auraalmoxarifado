@@ -2,8 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import { CreditCard, QrCode, FileText, Lock, ShieldCheck, Check, ArrowRight, ArrowLeft, Zap, ChevronUp, User, Building2, AlertCircle } from 'lucide-react';
 import Input from './UI/Input';
-import { CheckoutFormData, PaymentMethod, Product, PersonType, PaymentResult } from '../types';
-import { processCheckout, CheckoutResult } from '../services/checkoutService';
+import { CheckoutFormData, PaymentMethod, Product, PersonType, PaymentResult, Coupon } from '../types';
+import { processCheckout, CheckoutResult, validateCoupon } from '../services/checkoutService';
+import { Tag, Ticket } from 'lucide-react';
 
 const PLANS_DATA = {
   starter: {
@@ -84,6 +85,10 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
   const [cepLoading, setCepLoading] = useState(false);
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const formatCPF = (value: string) => {
     return value
@@ -231,7 +236,44 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
   const [billingCycle, setBillingCycle] = useState<'MONTHLY' | 'YEARLY'>(initialCycle);
 
   const currentPlan = PLANS_DATA[selectedPlan];
-  const currentPrice = currentPlan.prices[billingCycle];
+  const basePrice = currentPlan.prices[billingCycle];
+
+  const calculateDiscount = () => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.type === 'percentage') {
+      return (basePrice * appliedCoupon.value) / 100;
+    }
+    return appliedCoupon.value;
+  };
+
+  const discountAmount = calculateDiscount();
+  const currentPrice = Math.max(0, basePrice - discountAmount);
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode) return;
+    setCouponLoading(true);
+    setCouponError(null);
+    try {
+      const result = await validateCoupon(couponCode);
+      if (result.success && result.coupon) {
+        setAppliedCoupon(result.coupon);
+        setFormData(prev => ({ ...prev, couponCode: result.coupon?.code }));
+      } else {
+        setCouponError(result.error || 'Erro ao validar cupom');
+        setAppliedCoupon(null);
+      }
+    } catch (error) {
+      setCouponError('Erro inesperado ao validar cupom');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setFormData(prev => ({ ...prev, couponCode: undefined }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -597,8 +639,62 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
             <div className="space-y-3">
               <div className="bg-slate-900/80 rounded-xl p-4 border border-slate-800/60 shadow-inner">
                 <div className="flex justify-between text-[10px] mb-2">
-                  <span className="text-slate-500 font-black uppercase tracking-[0.05em]">Total Mensal</span>
-                  <span className="text-white font-black text-sm">R$ 497,00</span>
+                  <span className="text-slate-500 font-black uppercase tracking-[0.05em]">Subtotal</span>
+                  <span className="text-white font-black text-sm">R$ {basePrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                </div>
+
+                {appliedCoupon && (
+                  <div className="flex justify-between text-[10px] mb-2 text-emerald-500">
+                    <span className="font-black uppercase tracking-[0.05em]">Desconto ({appliedCoupon.code})</span>
+                    <span className="font-black">- R$ {discountAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                )}
+
+                <div className="mb-4 pt-2">
+                  {!appliedCoupon ? (
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={14} />
+                        <input
+                          type="text"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          placeholder="CUPOM"
+                          className="w-full bg-slate-800/50 border border-slate-700/50 rounded-lg py-2 pl-9 pr-2 text-[10px] font-bold text-white placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-blue-500/50 transition-all"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponCode}
+                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-[9px] font-black px-3 py-2 rounded-lg transition-all tracking-widest"
+                      >
+                        {couponLoading ? "..." : "APLICAR"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Ticket size={14} className="text-emerald-500" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{appliedCoupon.code}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-[9px] font-black text-slate-500 hover:text-red-500 transition-all uppercase tracking-widest"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  )}
+                  {couponError && (
+                    <p className="text-[9px] text-red-500 mt-1 font-bold">{couponError}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-between text-[10px] pt-2 border-t border-slate-800/30">
+                  <span className="text-slate-500 font-black uppercase tracking-[0.05em]">Total Final</span>
+                  <span className="text-blue-500 font-black text-lg">R$ {currentPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-[10px] pt-2 border-t border-slate-800/30">
                   <span className="text-slate-500 font-black uppercase tracking-[0.05em]">Ativação</span>

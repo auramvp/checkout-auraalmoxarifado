@@ -19,6 +19,19 @@ export interface CheckoutFormData {
   cardExpiry?: string;
   cardCVC?: string;
   cardName?: string;
+  couponCode?: string;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: 'fixed' | 'percentage';
+  value: number;
+  is_active: boolean;
+  max_uses?: number;
+  current_uses?: number;
+  start_date: string;
+  end_date: string;
 }
 
 export interface Product {
