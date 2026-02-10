@@ -5,6 +5,7 @@ import Input from './UI/Input';
 import { CheckoutFormData, PaymentMethod, Product, PersonType, PaymentResult, Coupon } from '../types';
 import { processCheckout, CheckoutResult, validateCoupon } from '../services/checkoutService';
 import { Tag, Ticket } from 'lucide-react';
+import Turnstile from 'react-turnstile';
 
 const PLANS_DATA = {
   starter: {
@@ -316,8 +317,15 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
     if (currentStep === 2) {
       return formData.postalCode.length === 9 && formData.address && formData.number && formData.city && formData.state;
     }
-    if (currentStep === 3 && formData.paymentMethod === 'credit_card') {
-      return formData.cardNumber && formData.cardNumber.length >= 16 && formData.cardExpiry && formData.cardExpiry.length === 5 && formData.cardCVC && formData.cardCVC.length >= 3 && formData.cardName;
+    if (currentStep === 3) {
+      if (formData.paymentMethod === 'credit_card') {
+        const cardValid = formData.cardNumber && formData.cardNumber.length >= 16 &&
+          formData.cardExpiry && formData.cardExpiry.length === 5 &&
+          formData.cardCVC && formData.cardCVC.length >= 3 &&
+          formData.cardName;
+        return !!cardValid && !!formData.turnstileToken;
+      }
+      return !!formData.turnstileToken;
     }
     return true;
   };
@@ -325,6 +333,7 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
   return (
     <div className="max-w-6xl mx-auto px-4 flex flex-col w-full">
       <header className="mb-4 w-full shrink-0 flex flex-col items-center text-center">
+        {/* ... (header content kept same via skipping, but tool requires contiguous block so simply modifying isStepValid is safer) */}
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-4 w-full">
           <div className="shrink-0 animate-in fade-in zoom-in duration-700">
             <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30 ring-1 ring-white/10">
@@ -539,6 +548,16 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
             </div>
 
             <div className="mt-5">
+              <div className="flex justify-center mb-4">
+                <Turnstile
+                  sitekey="0x4AAAAAACaSmlBs51Op_RRa" // Chave do Site
+                  onVerify={(token) => setFormData(prev => ({ ...prev, turnstileToken: token }))}
+                  onExpire={() => setFormData(prev => ({ ...prev, turnstileToken: undefined }))}
+                  theme="dark"
+                  appearance="interaction-only"
+                />
+              </div>
+
               {/* Error Message */}
               {checkoutError && (
                 <div className="mb-4 flex items-center gap-2 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-xl">
@@ -568,7 +587,11 @@ const Checkout: React.FC<CheckoutProps> = ({ onComplete, initialPlan = 'business
                     <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span className="text-[9px] uppercase tracking-[0.1em]">{currentStep === 3 ? "FINALIZAR" : "PRÓXIMO"}</span>
+                      <span className="text-[9px] uppercase tracking-[0.1em]">
+                        {currentStep === 3
+                          ? (!formData.turnstileToken ? "Aguardando Segurança..." : "FINALIZAR")
+                          : "PRÓXIMO"}
+                      </span>
                       {currentStep < 3 ? <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" /> : <Lock size={16} />}
                     </>
                   )}

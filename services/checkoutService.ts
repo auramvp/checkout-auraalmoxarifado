@@ -71,6 +71,7 @@ export async function processCheckout(
                 planKey,
                 billingCycle,
                 couponCode: formData.couponCode,
+                turnstileToken: formData.turnstileToken,
             }),
         });
 

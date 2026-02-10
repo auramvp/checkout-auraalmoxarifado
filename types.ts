@@ -20,6 +20,7 @@ export interface CheckoutFormData {
   cardCVC?: string;
   cardName?: string;
   couponCode?: string;
+  turnstileToken?: string;
 }
 
 export interface Coupon {
